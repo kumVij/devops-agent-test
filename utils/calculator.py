@@ -1,3 +1,5 @@
+import nonexistent_package_xyz  # this will fail on import
+
 def add(a: float, b: float) -> float:
     return a + b
 
