@@ -1,5 +1,3 @@
-import nonexistent_package_xyz  # trigger AI agent
-
 def add(a: float, b: float) -> float:
     return a + b
 
