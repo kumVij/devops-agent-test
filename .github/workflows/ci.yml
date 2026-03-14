@@ -1,0 +1,79 @@
+name: CI + AI Agent
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        id: install
+        run: |
+          pip install -r requirements.txt
+        continue-on-error: true
+
+      - name: Run tests
+        id: tests
+        run: |
+          pytest tests/ -v --tb=short 2>&1 | tee test_output.log
+          echo "exit_code=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Upload test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs
+          path: test_output.log
+
+      - name: Notify AI Agent on failure
+        if: steps.install.outcome == 'failure' || steps.tests.outcome == 'failure'
+        env:
+          AI_AGENT_URL: ${{ secrets.AI_AGENT_URL }}
+        run: |
+          # Determine which step failed
+          if [ "${{ steps.install.outcome }}" == "failure" ]; then
+            FAILED_STEP="Install dependencies"
+          else
+            FAILED_STEP="Run tests"
+          fi
+
+          # Read the log file
+          LOG_CONTENT=$(cat test_output.log 2>/dev/null || echo "No log available")
+
+          # Send to AI agent
+          curl -X POST "${AI_AGENT_URL}/webhook/pipeline-failure" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"source\": \"github_actions\",
+              \"repo\": \"${{ github.repository }}\",
+              \"run_id\": \"${{ github.run_id }}\",
+              \"branch\": \"${{ github.ref_name }}\",
+              \"commit_sha\": \"${{ github.sha }}\",
+              \"actor\": \"${{ github.actor }}\",
+              \"failed_step\": \"${FAILED_STEP}\",
+              \"raw_log\": $(echo "$LOG_CONTENT" | python3 -c \"import json,sys; print(json.dumps(sys.stdin.read()))\"),
+              \"dry_run\": false
+            }" \
+            --max-time 30 \
+            --silent \
+            --show-error \
+            || echo "AI Agent notification failed (non-blocking)"
+
+      - name: Fail the job if tests failed
+        if: steps.install.outcome == 'failure' || steps.tests.outcome == 'failure'
+        run: exit 1
