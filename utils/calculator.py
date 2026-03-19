@@ -14,10 +14,7 @@ def calculate_total(items: list) -> float:
 
 
 def apply_discount(price: float, discount_rate: float) -> float:
-    # BUG: should be price * (1 - discount_rate) but divides instead
-    # Test expects: apply_discount(100, 0.10) == 90.0
-    # Gets:         apply_discount(100, 0.10) == 1000.0  (wrong!)
-    return price / discount_rate
+    return price / discount_rate   # wrong — divide instead of subtract
 
 
 def calculate_tax(amount: float, tax_rate: float = 0.18) -> float:
