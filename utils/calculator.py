@@ -1,3 +1,5 @@
+import nonexistent_package_xyz   # triggers agent
+
 def add(a: float, b: float) -> float:
     return a + b
 
