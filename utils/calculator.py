@@ -1,15 +1,28 @@
-import nonexistent_package_xyz   # triggers agent
+"""
+utils/calculator.py — Math utilities
+This file has: Wrong business logic — apply_discount divides instead of subtracts
+"""
 
-def add(a: float, b: float) -> float:
-    return a + b
 
-def subtract(a: float, b: float) -> float:
-    return a - b
+def calculate_total(items: list) -> float:
+    total = 0.0
+    for item in items:
+        price = item.get("price", 0)
+        quantity = item.get("quantity", 1)
+        total += price * quantity
+    return total
 
-def multiply(a: float, b: float) -> float:
-    return a * b
 
-def divide(a: float, b: float) -> float:
-    if b == 0:
-        raise ValueError("Cannot divide by zero")
-    return a / b
+def apply_discount(price: float, discount_rate: float) -> float:
+    # BUG: should be price * (1 - discount_rate) but divides instead
+    # Test expects: apply_discount(100, 0.10) == 90.0
+    # Gets:         apply_discount(100, 0.10) == 1000.0  (wrong!)
+    return price / discount_rate
+
+
+def calculate_tax(amount: float, tax_rate: float = 0.18) -> float:
+    return round(amount * tax_rate, 2)
+
+
+def format_currency(amount: float) -> str:
+    return f"${amount:.2f}"

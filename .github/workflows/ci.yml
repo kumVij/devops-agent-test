@@ -18,61 +18,58 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
+        id: install
         run: pip install -r requirements.txt
+        continue-on-error: true
 
       - name: Run tests
         id: run_tests
         run: |
-          pytest tests/ -v --tb=short 2>&1 | tee test_output.log
-          echo "EXIT_CODE=${PIPESTATUS[0]}" >> $GITHUB_ENV
+          pytest tests/ -v --tb=long 2>&1 | tee test_output.log
         continue-on-error: true
 
-      - name: Check test result
+      - name: Check for failures
         id: check
         run: |
-          if grep -q "FAILED\|ERROR\|error" test_output.log; then
+          if grep -qE "FAILED|ERROR|error" test_output.log; then
             echo "TESTS_FAILED=true" >> $GITHUB_ENV
-            echo "Tests failed!"
-            cat test_output.log
           else
             echo "TESTS_FAILED=false" >> $GITHUB_ENV
-            echo "Tests passed!"
           fi
 
       - name: Notify AI Agent on failure
-        if: env.TESTS_FAILED == 'true'
+        if: steps.install.outcome == 'failure' || env.TESTS_FAILED == 'true'
         run: |
-          LOG_CONTENT=$(cat test_output.log)
+          if [ "${{ steps.install.outcome }}" == "failure" ]; then
+            FAILED_STEP="Install dependencies"
+          else
+            FAILED_STEP="Run tests"
+          fi
+
           PAYLOAD=$(python3 -c "
-          import json, sys
-          log = open('test_output.log').read()
-          data = {
+          import json
+          log = open('test_output.log').read() if __import__('os').path.exists('test_output.log') else 'Install failed'
+          print(json.dumps({
             'source': 'github_actions',
             'repo': '${{ github.repository }}',
             'run_id': '${{ github.run_id }}',
             'branch': '${{ github.ref_name }}',
             'commit_sha': '${{ github.sha }}',
             'actor': '${{ github.actor }}',
-            'failed_step': 'Run tests',
+            'failed_step': '${FAILED_STEP}',
             'raw_log': log,
             'dry_run': False
-          }
-          print(json.dumps(data))
+          }))
           ")
 
-          echo "Sending to AI Agent..."
           curl -X POST "${{ secrets.AI_AGENT_URL }}/webhook/pipeline-failure" \
             -H "Content-Type: application/json" \
             -H "ngrok-skip-browser-warning: true" \
             -d "$PAYLOAD" \
             --max-time 30 \
-            -v \
-            || echo "AI Agent notification failed (non-blocking)"
+            --silent --show-error \
+            || echo "AI Agent notification failed"
 
-          echo "AI Agent notified!"
-
-      - name: Fail the job if tests failed
-        if: env.TESTS_FAILED == 'true'
-        run: |
-          echo "Failing job because tests failed"
-          exit 1
+      - name: Fail job if tests failed
+        if: steps.install.outcome == 'failure' || env.TESTS_FAILED == 'true'
+        run: exit 1

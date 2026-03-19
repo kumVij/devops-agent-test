@@ -1,16 +1,31 @@
-from flask import Flask, jsonify
-from utils.calculator import add, divide
+"""
+app.py — E-commerce order processing app
+This file has: missing import (requests not in requirements)
+"""
 
-app = Flask(__name__)
+import os
+import requests          # NOT in requirements.txt — will cause ModuleNotFoundError
+from services.order import OrderService
+from services.payment import PaymentService
+from config.settings import AppConfig
 
-@app.route("/")
-def home():
-    return jsonify({"status": "ok", "message": "DevOps Agent Test App"})
 
-@app.route("/calculate")
-def calculate():
-    result = add(10, 5)
-    return jsonify({"result": result})
+def main():
+    config = AppConfig()
+    order_service = OrderService(config)
+    payment_service = PaymentService(config)
+
+    print(f"App started on port {config.PORT}")
+    print(f"Database: {config.DATABASE_URL}")
+
+    # Process a sample order
+    order = order_service.create_order(
+        user_id=1,
+        items=[{"product_id": 101, "quantity": 2}],
+    )
+    result = payment_service.charge(order)
+    print(f"Order processed: {result}")
+
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    main()
