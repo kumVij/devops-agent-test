@@ -17,7 +17,7 @@ def apply_discount(price: float, discount_rate: float) -> float:
         return price
     return price * (1 - discount_rate)   # correct formula
 
-def calculate_tax(amount: float, tax_rate: float = 0.18) -> float:
+def calculate_tax(amount: float, tax_rate: float = 0.28) -> float:
     return round(amount * tax_rate, 2)
 
 def format_currency(amount: float) -> str:

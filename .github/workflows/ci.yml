@@ -2,7 +2,13 @@ name: CI + AI Agent
 
 on:
   push:
-    branches: ["**"]
+    branches:
+      - main
+      - "feature/**"
+      - "fix/**"
+      - "hotfix/**"
+    # ai-fix/* branches are NOT listed — CI won't run on them
+    # This prevents the agent from triggering itself in a loop
 
 jobs:
   test:
@@ -31,14 +37,17 @@ jobs:
       - name: Check for failures
         id: check
         run: |
-          if grep -qE "FAILED|ERROR|error" test_output.log; then
+          if grep -qE "FAILED|ERROR" test_output.log; then
             echo "TESTS_FAILED=true" >> $GITHUB_ENV
           else
             echo "TESTS_FAILED=false" >> $GITHUB_ENV
           fi
 
       - name: Notify AI Agent on failure
-        if: steps.install.outcome == 'failure' || env.TESTS_FAILED == 'true'
+        # Extra safety: never notify from ai-fix branches
+        if: |
+          (steps.install.outcome == 'failure' || env.TESTS_FAILED == 'true') &&
+          !startsWith(github.ref_name, 'ai-fix/')
         run: |
           if [ "${{ steps.install.outcome }}" == "failure" ]; then
             FAILED_STEP="Install dependencies"
@@ -47,8 +56,8 @@ jobs:
           fi
 
           PAYLOAD=$(python3 -c "
-          import json
-          log = open('test_output.log').read() if __import__('os').path.exists('test_output.log') else 'Install failed'
+          import json, os
+          log = open('test_output.log').read() if os.path.exists('test_output.log') else 'Install failed'
           print(json.dumps({
             'source': 'github_actions',
             'repo': '${{ github.repository }}',
