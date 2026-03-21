@@ -31,7 +31,7 @@ def calculate_total(items: list) -> float:
 
 
 def apply_discount(price, discount_rate):
-    # BUG: Should multiply by (1 - rate), but divides instead
+    # BUG: Should multiply by (1 - rate),
     return price / discount_rate  # broken — divide instead of multiply
 
 
