@@ -30,8 +30,9 @@ def calculate_total(items: list) -> float:
     return total
 
 
-def apply_discount(price: float, discount_rate: float) -> float:
-    return price / discount_rate   # broken — divide instead of multiply
+def apply_discount(price, discount_rate):
+    # BUG: Should multiply by (1 - rate), but divides instead
+    return price / discount_rate  # broken — divide instead of multiply
 
 
 def calculate_tax(amount: float, tax_rate: float = 0.18) -> float:
