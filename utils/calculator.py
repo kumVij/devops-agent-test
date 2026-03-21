@@ -39,4 +39,4 @@ def calculate_tax(amount: float, tax_rate: float = 0.18) -> float:
 
 
 def format_currency(amount: float) -> str:
-    return f"${amount:.2f}"
+    return f"${amount:.2f}"    return price - (price * discount_rate)
